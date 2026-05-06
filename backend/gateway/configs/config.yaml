@@ -1,0 +1,69 @@
+# LifeRecorder 网关服务配置
+
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "release"  # debug / release / test
+
+# 数据库配置
+database:
+  type: "sqlite"  # sqlite / postgres / mysql
+  # SQLite
+  sqlite_path: "./data/life-recorder.db"
+  # PostgreSQL
+  postgres_host: "localhost"
+  postgres_port: 5432
+  postgres_user: "liferecorder"
+  postgres_password: ""
+  postgres_dbname: "life_recorder"
+  postgres_sslmode: "disable"
+  # MySQL
+  mysql_host: "localhost"
+  mysql_port: 3306
+  mysql_user: "liferecorder"
+  mysql_password: ""
+  mysql_dbname: "life_recorder"
+  # 通用
+  max_idle_conns: 10
+  max_open_conns: 100
+  log_level: "warn"  # silent / error / warn / info
+
+# JWT 配置
+jwt:
+  secret: "change-me-in-production"
+  access_ttl: 3600      # 1小时
+  refresh_ttl: 604800   # 7天
+  issuer: "life-recorder"
+
+# 存储配置
+storage:
+  default_adapter: "local"  # local / s3 / oss / obs / cos / webdav
+  local:
+    base_path: "./data/uploads"
+    base_url: "/uploads"
+  max_upload_size: 104857600  # 100MB
+
+# AI 服务配置
+ai_service:
+  url: "http://localhost:8081"
+  timeout: 300  # 秒
+
+# 日志配置
+log:
+  level: "info"  # debug / info / warn / error
+  format: "json"  # json / console
+  output: "stdout"  # stdout / file
+  file_path: "./data/logs/gateway.log"
+  max_size: 100      # MB
+  max_backups: 5
+  max_age: 30        # 天
+
+# Webhook 配置
+webhook:
+  worker_count: 5
+  retry_delays: [5, 30, 120]  # 秒
+
+# 初始化状态
+setup:
+  initialized: false

@@ -1,0 +1,60 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+backend/gateway/gateway
+backend/mcp-server/mcp-server
+
+# Build output
+/dist/
+/build/
+/tmp/
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data directories
+data/
+*.db
+*.db-journal
+
+# Logs
+*.log
+logs/
+
+# Upload directory
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Coverage
+coverage/
+*.cover
+
+# Go
+go.work
+go.work.sum
