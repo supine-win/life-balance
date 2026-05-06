@@ -4,10 +4,10 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/life-recorder/gateway/internal/model"
 	"github.com/life-recorder/gateway/internal/repository"
-	pkguuid "github.com/life-recorder/gateway/internal/pkg/uuid"
 )
 
 // EventService 事件服务
@@ -51,12 +51,13 @@ func (s *EventService) Create(userID string, input *CreateInput) (*model.Event, 
 	if err != nil {
 		return nil, errors.New("无效的事件时间格式")
 	}
+	eventTimeTyped := eventTime.(time.Time)
 
 	event := &model.Event{
 		UserID:      userID,
 		Title:       input.Title,
 		Description: input.Description,
-		EventTime:   eventTime,
+		EventTime:   eventTimeTyped,
 		Location:    input.Location,
 		Latitude:    input.Latitude,
 		Longitude:   input.Longitude,
@@ -72,10 +73,12 @@ func (s *EventService) Create(userID string, input *CreateInput) (*model.Event, 
 		IsDeleted:   false,
 	}
 
+	var endTimeTyped time.Time
 	if input.EndTime != "" {
-		endTime, err := parseTime(input.EndTime)
+		endTimeVal, err := parseTime(input.EndTime)
 		if err == nil {
-			event.EndTime = &endTime
+			endTimeTyped = endTimeVal.(time.Time)
+			event.EndTime = &endTimeTyped
 		}
 	}
 
@@ -127,13 +130,14 @@ func (s *EventService) Update(id, userID string, input *CreateInput) (*model.Eve
 	event.Priority = input.Priority
 
 	if input.EventTime != "" {
-		if t, err := parseTime(input.EventTime); err == nil {
-			event.EventTime = t
+		if tVal, err := parseTime(input.EventTime); err == nil {
+			event.EventTime = tVal.(time.Time)
 		}
 	}
 	if input.EndTime != "" {
-		if t, err := parseTime(input.EndTime); err == nil {
-			event.EndTime = &t
+		if tVal, err := parseTime(input.EndTime); err == nil {
+			tTyped := tVal.(time.Time)
+			event.EndTime = &tTyped
 		}
 	}
 

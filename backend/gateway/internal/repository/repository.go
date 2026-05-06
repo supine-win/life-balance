@@ -11,7 +11,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // DB 全局数据库实例
@@ -32,22 +32,22 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		dialector = sqlite.Open(cfg.DSN())
 	}
 
-	var logLevel logger.LogLevel
+	var logLevel gormlogger.LogLevel
 	switch cfg.LogLevel {
 	case "silent":
-		logLevel = logger.Silent
+		logLevel = gormlogger.Silent
 	case "error":
-		logLevel = logger.Error
+		logLevel = gormlogger.Error
 	case "warn":
-		logLevel = logger.Warn
+		logLevel = gormlogger.Warn
 	case "info":
-		logLevel = logger.Info
+		logLevel = gormlogger.Info
 	default:
-		logLevel = logger.Warn
+		logLevel = gormlogger.Warn
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger:                 logger.Default.LogMode(logLevel),
+		Logger:                 gormlogger.Default.LogMode(logLevel),
 		SkipDefaultTransaction: true,
 		PrepareStmt:           true,
 	})

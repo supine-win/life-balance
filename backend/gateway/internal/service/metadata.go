@@ -211,7 +211,7 @@ func (e *MetadataExtractor) extractVideoMetadata(meta *model.MediaMetadata, file
 			}
 		}
 		if v, ok := info["width"]; ok {
-			if i, err := toInt(v); err == nil {
+			if _, err := toInt(v); err == nil {
 				// 更新 media 记录的宽高
 			}
 		}

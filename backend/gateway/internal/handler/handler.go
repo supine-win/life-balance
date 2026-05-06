@@ -544,9 +544,7 @@ func queryIntDefault(c *gin.Context, key string, defaultVal int) int {
 		return defaultVal
 	}
 	var result int
-	if _, err := validator.NormalizePagination(1, 20); err != nil {
-		_ = result
-	}
+	_ = result
 	// 简单实现
 	var i int
 	for _, ch := range val {
