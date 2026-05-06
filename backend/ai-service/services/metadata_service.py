@@ -11,14 +11,14 @@ LifeRecorder AI 服务 - 元数据提取服务
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from loguru import logger
 
 from core.config import settings
 from models.schemas import (
-    EXIFData, GPSCoordinate, MetadataExtractionResult,
-    MetadataSuggestion, VideoMetadata
+    GPSCoordinate, MetadataExtractionResult,
+    MetadataSuggestion,
 )
 
 
@@ -152,7 +152,7 @@ class MetadataExtractor:
         # 提取图片尺寸
         try:
             from PIL import Image
-            with Image.open(file_path) as img:
+            with Image.open(file_path):
                 pass  # width/height 可以在这里获取
         except Exception:
             pass

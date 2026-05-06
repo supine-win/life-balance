@@ -1,7 +1,7 @@
 """
 LifeRecorder AI 服务 - 路由定义
 """
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile
 
 from models.schemas import (
     ChatRequest, ChatResponse, ExtractEventRequest, ExtractEventResponse,

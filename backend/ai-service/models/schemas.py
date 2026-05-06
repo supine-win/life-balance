@@ -4,7 +4,7 @@ LifeRecorder AI 服务 - Pydantic 模型
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 # ==================== 通用 ====================

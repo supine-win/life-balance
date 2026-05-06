@@ -1,8 +1,6 @@
 """
 LifeRecorder AI 服务 - ASR 语音转文字服务
 """
-import os
-from typing import List, Optional
 
 from loguru import logger
 

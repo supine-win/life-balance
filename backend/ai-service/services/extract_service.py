@@ -2,7 +2,7 @@
 LifeRecorder AI 服务 - 事件提取服务
 """
 import json
-from typing import Any, Dict, List
+from typing import List
 
 import httpx
 from loguru import logger
