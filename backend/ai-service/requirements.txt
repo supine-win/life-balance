@@ -1,0 +1,19 @@
+# LifeRecorder AI 服务依赖
+fastapi>=0.110.0
+uvicorn>=0.29.0
+python-multipart>=0.0.9
+pydantic>=2.6.0
+
+# 媒体元数据提取
+Pillow>=10.2.0
+exifread>=3.0.0
+ffmpeg-python>=0.2.0
+
+# AI / NLP
+httpx>=0.27.0
+
+# 视频生成（豆包 Seedance 等API调用）
+aiohttp>=3.9.0
+
+# 日志
+loguru>=0.7.2

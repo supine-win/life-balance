@@ -1,0 +1,145 @@
+/* LifeRecorder 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-size: 14px;
+  color: var(--lr-text);
+  background-color: var(--lr-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 链接 */
+a {
+  color: var(--lr-primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--lr-primary-hover);
+}
+
+/* 动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--lr-transition-normal);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active {
+  transition: all var(--lr-transition-normal);
+}
+.slide-fade-leave-active {
+  transition: all var(--lr-transition-fast);
+}
+.slide-fade-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.slide-fade-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
+}
+
+/* 卡片通用样式 */
+.lr-card {
+  background: var(--lr-bg-white);
+  border-radius: var(--lr-border-radius);
+  padding: var(--lr-card-padding);
+  box-shadow: var(--lr-shadow);
+  transition: transform var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
+}
+.lr-card:hover {
+  transform: scale(var(--lr-card-hover-scale));
+}
+
+/* 页面容器 */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  color: var(--lr-text-muted);
+}
+.empty-state .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* 事件卡片颜色标记 */
+.event-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* 媒体缩略图 */
+.media-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* 元数据建议卡片 */
+.metadata-suggestion-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: var(--lr-border-radius);
+  padding: 16px;
+  margin-top: 12px;
+}
+.metadata-suggestion-card .suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--lr-border);
+}
+.metadata-suggestion-card .suggestion-item:last-child {
+  border-bottom: none;
+}
+.metadata-suggestion-card .suggestion-label {
+  font-weight: 500;
+  width: 80px;
+  flex-shrink: 0;
+}
+.metadata-suggestion-card .suggestion-value {
+  flex: 1;
+}
+.metadata-suggestion-card .hint-text {
+  font-size: 13px;
+  color: var(--lr-text-secondary);
+  margin-top: 8px;
+  font-style: italic;
+}

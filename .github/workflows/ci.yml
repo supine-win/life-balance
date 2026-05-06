@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Go 网关测试
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Build Gateway
+        working-directory: backend/gateway
+        run: |
+          go mod tidy
+          go build ./...
+      - name: Vet
+        working-directory: backend/gateway
+        run: go vet ./...
+
+  # Python AI 服务测试
+  ai-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        working-directory: backend/ai-service
+        run: |
+          pip install -r requirements.txt
+      - name: Lint
+        working-directory: backend/ai-service
+        run: |
+          pip install ruff
+          ruff check .
+
+  # 前端构建测试
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  # Docker 构建测试
+  docker:
+    runs-on: ubuntu-latest
+    needs: [gateway, ai-service, frontend]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker images
+        run: |
+          docker compose -f deploy/docker-compose.yml build

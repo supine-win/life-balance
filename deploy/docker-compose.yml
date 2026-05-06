@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # 前端 + Nginx
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+  # Go 网关服务
+  gateway:
+    build:
+      context: ..
+      dockerfile: backend/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - LR_SERVER_MODE=release
+      - LR_DATABASE_TYPE=sqlite
+      - LR_DATABASE_SQLITE_PATH=/app/data/life-recorder.db
+      - LR_STORAGE_LOCAL_BASE_PATH=/app/data/uploads
+      - LR_JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - LR_AI_SERVICE_URL=http://ai-service:8081
+    volumes:
+      - gateway-data:/app/data
+    depends_on:
+      - ai-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Python AI 服务
+  ai-service:
+    build:
+      context: ..
+      dockerfile: backend/ai-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - AI_HOST=0.0.0.0
+      - AI_PORT=8081
+      - GATEWAY_URL=http://gateway:8080
+      - GEOCODING_API=${GEOCODING_API:-nominatim}
+      - AMAP_API_KEY=${AMAP_API_KEY:-}
+      - LLM_API_URL=${LLM_API_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+    volumes:
+      - ai-uploads:/tmp/life-recorder/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MCP Server
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: backend/mcp-server/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - GATEWAY_URL=http://gateway:8080
+      - MCP_PORT=8082
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
+  ai-uploads:

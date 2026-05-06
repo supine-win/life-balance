@@ -1493,3 +1493,241 @@ var adapterFactories = map[string]func(cfg map[string]interface{}) (StorageAdapt
 
 所有服务运行在单个 Docker Compose 中，Nginx 统一入口。
 单机部署时 SQLite 零外部依赖，生产环境推荐 PostgreSQL。
+
+## 11. 多媒体元数据智能提取系统
+
+### 11.1 概述
+
+当用户上传照片/视频时，系统自动提取丰富的元数据，生成结构化提示卡片，帮助用户快速完成事件录入。
+
+### 11.2 元数据提取流程
+
+```
+用户上传文件
+    │
+    ▼
+Go 网关接收文件 ──→ 保存到存储后端 ──→ 创建 Media 记录
+    │
+    ▼
+异步元数据提取 Worker
+    │
+    ├── 照片: EXIF/IPTC/XMP 解析
+    │   ├── 拍摄时间 (DateTimeOriginal)
+    │   ├── GPS 坐标 → 逆地理编码
+    │   ├── 设备信息 (Make/Model/Lens/FocalLength/Aperture)
+    │   ├── 文件名日期模式匹配 (IMG_20260501_xxx.jpg)
+    │   └── IPTC 关键词/描述
+    │
+    ├── 视频: ffprobe 元数据
+    │   ├── 拍摄时间 (creation_time)
+    │   ├── GPS (GoPro/DJI 等专有 tag)
+    │   ├── 时长/分辨率/编码
+    │   └── 关键帧提取 → 缩略图
+    │
+    └── 音频: ID3/WAV 元数据
+        ├── 标题/艺术家/专辑
+        └── 时长/采样率
+    │
+    ▼
+生成结构化提示卡片
+    ├── 建议的事件时间
+    ├── 建议的地点
+    ├── 建议的标签
+    ├── 设备/场景提示文字
+    └── 置信度评分
+    │
+    ▼
+前端展示提示卡片 → 用户一键采纳或编辑确认
+```
+
+### 11.3 新增数据模型字段
+
+#### MediaMetadata（媒体元数据）
+```sql
+CREATE TABLE media_metadata (
+    id              VARCHAR(36) PRIMARY KEY,
+    media_id        VARCHAR(36) NOT NULL UNIQUE,
+    -- 时间信息
+    shot_time       DATETIME,                          -- 拍摄时间
+    shot_time_src   VARCHAR(32) DEFAULT '',            -- 时间来源: exif/filename/video/user
+    -- GPS 信息
+    gps_latitude    DECIMAL(10, 7),
+    gps_longitude   DECIMAL(10, 7),
+    gps_altitude    DECIMAL(10, 2),
+    location_name   VARCHAR(255) DEFAULT '',            -- 逆地理编码结果
+    location_src    VARCHAR(32) DEFAULT '',            -- 地点来源: exif/video/geocode
+    -- 相机/设备
+    camera_make     VARCHAR(128) DEFAULT '',
+    camera_model   VARCHAR(128) DEFAULT '',
+    lens_model     VARCHAR(128) DEFAULT '',
+    focal_length   DECIMAL(8, 2),                      -- mm
+    aperture       DECIMAL(4, 2),                      -- f/x.y
+    shutter_speed  VARCHAR(32) DEFAULT '',              -- 1/200
+    iso            INT,
+    -- 视频/音频
+    video_codec    VARCHAR(32) DEFAULT '',
+    audio_codec    VARCHAR(32) DEFAULT '',
+    frame_rate     DECIMAL(8, 2),
+    bitrate        BIGINT,
+    -- IPTC/XMP
+    iptc_keywords  JSON,                               -- ["风景","旅行"]
+    iptc_caption   TEXT,
+    -- 文件信息
+    filename_pattern VARCHAR(64) DEFAULT '',           -- 匹配到的文件名模式
+    -- 原始 EXIF 数据（完整）
+    raw_exif       JSON,
+    -- AI 生成建议
+    suggestions    JSON,                               -- 结构化建议卡片
+    -- 提取状态
+    extract_status VARCHAR(16) DEFAULT 'pending',      -- pending/processing/completed/failed
+    extract_error  TEXT,
+    extracted_at   DATETIME,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
+);
+```
+
+#### Suggestions JSON 结构
+```json
+{
+    "event_time": "2026-05-01T14:32:00+08:00",
+    "location": "上海市黄浦区外滩",
+    "tags": ["外滩", "上海", "黄浦江"],
+    "category": "旅行",
+    "hint_text": "使用 iPhone 15 Pro 在上海外滩拍摄",
+    "device_text": "iPhone 15 Pro · 26mm · ƒ/1.8 · ISO 50",
+    "scene_text": "户外晴天下拍摄",
+    "confidence": {
+        "time": 0.95,
+        "location": 0.88,
+        "tags": 0.72
+    }
+}
+```
+
+### 11.4 新增 API 端点
+
+#### POST /api/v1/media/upload-with-metadata
+上传文件并返回元数据提取结果（同步等待提取完成或返回任务ID）
+
+请求: multipart/form-data
+- `file`: 文件
+- `event_id`: 关联事件ID（可选）
+- `wait_for_metadata`: bool（是否等待元数据提取完成，默认 true，超时5秒）
+
+响应:
+```json
+{
+    "code": 0,
+    "data": {
+        "media": { "id": "...", "type": "image", ... },
+        "metadata": {
+            "shot_time": "2026-05-01T14:32:00+08:00",
+            "location_name": "上海市黄浦区外滩",
+            "camera_make": "Apple",
+            "camera_model": "iPhone 15 Pro",
+            "focal_length": 26.0,
+            "aperture": 1.8,
+            "iso": 50
+        },
+        "suggestions": {
+            "event_time": "...",
+            "location": "...",
+            "tags": ["..."],
+            "hint_text": "使用 iPhone 15 Pro 在上海外滩拍摄",
+            "confidence": { "time": 0.95, "location": 0.88 }
+        },
+        "task_id": "..." // 如果异步提取
+    }
+}
+```
+
+#### GET /api/v1/media/:id/metadata
+获取完整元数据
+
+响应:
+```json
+{
+    "code": 0,
+    "data": {
+        "media_id": "...",
+        "shot_time": "...",
+        "gps_latitude": 31.2397,
+        "gps_longitude": 121.4918,
+        "location_name": "上海市黄浦区外滩",
+        "camera_make": "Apple",
+        "camera_model": "iPhone 15 Pro",
+        "lens_model": "iPhone 15 Pro back camera 5.06mm f/1.78",
+        "focal_length": 5.06,
+        "aperture": 1.78,
+        "shutter_speed": "1/3949",
+        "iso": 50,
+        "iptc_keywords": [],
+        "iptc_caption": "",
+        "raw_exif": { ... },
+        "suggestions": { ... },
+        "extract_status": "completed",
+        "extracted_at": "..."
+    }
+}
+```
+
+#### POST /api/v1/media/:id/apply-suggestions
+将元数据建议应用到关联事件
+
+请求:
+```json
+{
+    "fields": ["event_time", "location", "tags"],
+    "event_id": "uuid" // 如果 media 未关联 event
+}
+```
+
+### 11.5 技术实现
+
+#### Go 后端（元数据提取核心）
+- `github.com/dsoprea/go-exif/v3` — EXIF 解析
+- `github.com/dsoprea/go-exif/v3/common` — EXIF 通用标签
+- `github.com/rwcarlsen/goexif/exif` — 备用 EXIF 库
+- `github.com/barasher/go-exiftool` — ExifTool 封装（可选，更全面）
+- 文件名日期正则: `(?i)(?:IMG|DSC|VID|Screenshot).*?(\d{4})(\d{2})(\d{2})`
+
+#### Python AI 服务（增强处理）
+- `Pillow` + `exifread` — 照片 EXIF
+- `ffmpeg-python` — 视频元数据和关键帧提取
+- GPS 逆地理编码: 高德 Web API / 百度地图 API / Nominatim
+
+#### GPS 逆地理编码策略
+1. 优先使用用户配置的 API（高德/百度）
+2. 回退到 Nominatim (OpenStreetMap, 免费)
+3. 结果缓存到本地，减少 API 调用
+
+### 11.6 异步处理架构
+
+```
+上传完成 → 写入 media 记录 → 发送到提取队列
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+              EXIF 提取      视频元数据提取    文件名解析
+                    │               │               │
+                    └───────────────┼───────────────┘
+                                    ▼
+                            合并元数据结果
+                                    │
+                            ┌───────┴───────┐
+                            ▼               ▼
+                    GPS 逆地理编码    生成建议卡片
+                            │               │
+                            └───────┬───────┘
+                                    ▼
+                            更新 media_metadata
+                                    │
+                                    ▼
+                        通知前端 (SSE / WebSocket / 轮询)
+```
+
+单机模式使用 Go channel + goroutine 作为任务队列。
+分布式模式可切换到 Redis/RabbitMQ。

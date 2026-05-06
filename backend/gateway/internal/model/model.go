@@ -84,14 +84,14 @@ func (b *BaseModel) BeforeCreate(tx *gorm.DB) error {
 // User 用户模型
 type User struct {
 	BaseModel
-	Username  string `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"`
-	Email     string `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
-	Password  string `gorm:"type:varchar(255);not null" json:"-"`
-	Nickname  string `gorm:"type:varchar(64);default:''" json:"nickname"`
-	Avatar    string `gorm:"type:varchar(512);default:''" json:"avatar"`
-	Status    int    `gorm:"type:tinyint;default:1" json:"status"` // 1=正常 0=禁用
+	Username  string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"`
+	Email     string     `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	Password  string     `gorm:"type:varchar(255);not null" json:"-"`
+	Nickname  string     `gorm:"type:varchar(64);default:''" json:"nickname"`
+	Avatar    string     `gorm:"type:varchar(512);default:''" json:"avatar"`
+	Status    int        `gorm:"type:tinyint;default:1" json:"status"` // 1=正常 0=禁用
 	LastLogin *time.Time `json:"last_login"`
-	Roles     []Role `gorm:"many2many:user_roles" json:"roles,omitempty"`
+	Roles     []Role     `gorm:"many2many:user_roles" json:"roles,omitempty"`
 }
 
 func (User) TableName() string { return "users" }
@@ -166,26 +166,79 @@ func (Event) TableName() string { return "events" }
 
 // Media 媒体模型
 type Media struct {
-	ID              string     `gorm:"type:varchar(36);primaryKey" json:"id"`
-	UserID          string     `gorm:"type:varchar(36);not null;index" json:"user_id"`
-	EventID         *string    `gorm:"type:varchar(36);index" json:"event_id"`
-	Type            string     `gorm:"type:varchar(16);not null" json:"type"` // image/video/audio/document
-	StorageAdapter  string     `gorm:"type:varchar(32);not null;default:'local'" json:"storage_adapter"`
-	StoragePath     string     `gorm:"type:varchar(512);not null" json:"storage_path"`
-	OriginalName    string     `gorm:"type:varchar(255);default:''" json:"original_name"`
-	ThumbnailPath   string     `gorm:"type:varchar(512);default:''" json:"thumbnail_path"`
-	MimeType        string     `gorm:"type:varchar(128);not null" json:"mime_type"`
-	Size            int64      `gorm:"not null;default:0" json:"size"`
-	Width           *int       `json:"width"`
-	Height          *int       `json:"height"`
-	Duration        *float64   `gorm:"type:decimal(10,2)" json:"duration"`
-	FileHash        string     `gorm:"type:varchar(64);index" json:"file_hash"`
-	Metadata        JSONString `gorm:"type:json" json:"metadata"`
-	SortOrder       int        `gorm:"default:0" json:"sort_order"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	ID             string     `gorm:"type:varchar(36);primaryKey" json:"id"`
+	UserID         string     `gorm:"type:varchar(36);not null;index" json:"user_id"`
+	EventID        *string    `gorm:"type:varchar(36);index" json:"event_id"`
+	Type           string     `gorm:"type:varchar(16);not null" json:"type"` // image/video/audio/document
+	StorageAdapter string     `gorm:"type:varchar(32);not null;default:'local'" json:"storage_adapter"`
+	StoragePath    string     `gorm:"type:varchar(512);not null" json:"storage_path"`
+	OriginalName   string     `gorm:"type:varchar(255);default:''" json:"original_name"`
+	ThumbnailPath  string     `gorm:"type:varchar(512);default:''" json:"thumbnail_path"`
+	MimeType       string     `gorm:"type:varchar(128);not null" json:"mime_type"`
+	Size           int64      `gorm:"not null;default:0" json:"size"`
+	Width          *int       `json:"width"`
+	Height         *int       `json:"height"`
+	Duration       *float64   `gorm:"type:decimal(10,2)" json:"duration"`
+	FileHash       string     `gorm:"type:varchar(64);index" json:"file_hash"`
+	Metadata       JSONString `gorm:"type:json" json:"metadata"`
+	SortOrder      int        `gorm:"default:0" json:"sort_order"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	MediaMetadata  *MediaMetadata `gorm:"foreignKey:MediaID" json:"media_metadata,omitempty"`
 }
 
 func (Media) TableName() string { return "media" }
+
+// ==================== 多媒体元数据智能提取 ====================
+
+// MediaMetadata 媒体元数据模型
+type MediaMetadata struct {
+	ID             string     `gorm:"type:varchar(36);primaryKey" json:"id"`
+	MediaID        string     `gorm:"type:varchar(36);not null;uniqueIndex" json:"media_id"`
+	ShotTime       *time.Time `json:"shot_time"`
+	ShotTimeSrc    string     `gorm:"type:varchar(32);default:''" json:"shot_time_src"` // exif/filename/video/user
+	GPSLatitude    *float64   `gorm:"type:decimal(10,7)" json:"gps_latitude"`
+	GPSLongitude   *float64   `gorm:"type:decimal(10,7)" json:"gps_longitude"`
+	GPSAltitude    *float64   `gorm:"type:decimal(10,2)" json:"gps_altitude"`
+	LocationName   string     `gorm:"type:varchar(255);default:''" json:"location_name"`
+	LocationSrc    string     `gorm:"type:varchar(32);default:''" json:"location_src"` // exif/video/geocode
+	CameraMake     string     `gorm:"type:varchar(128);default:''" json:"camera_make"`
+	CameraModel    string     `gorm:"type:varchar(128);default:''" json:"camera_model"`
+	LensModel      string     `gorm:"type:varchar(128);default:''" json:"lens_model"`
+	FocalLength    *float64   `gorm:"type:decimal(8,2)" json:"focal_length"`
+	Aperture       *float64   `gorm:"type:decimal(4,2)" json:"aperture"`
+	ShutterSpeed   string     `gorm:"type:varchar(32);default:''" json:"shutter_speed"`
+	ISO            *int       `json:"iso"`
+	VideoCodec     string     `gorm:"type:varchar(32);default:''" json:"video_codec"`
+	AudioCodec     string     `gorm:"type:varchar(32);default:''" json:"audio_codec"`
+	FrameRate      *float64   `gorm:"type:decimal(8,2)" json:"frame_rate"`
+	Bitrate        *int64     `json:"bitrate"`
+	IPTCKeywords   StringArray `gorm:"type:json" json:"iptc_keywords"`
+	IPTCCaption    string     `gorm:"type:text" json:"iptc_caption"`
+	FilenamePattern string    `gorm:"type:varchar(64);default:''" json:"filename_pattern"`
+	RawEXIF        JSONString `gorm:"type:json" json:"raw_exif"`
+	Suggestions    JSONString `gorm:"type:json" json:"suggestions"`
+	ExtractStatus  string     `gorm:"type:varchar(16);default:'pending'" json:"extract_status"` // pending/processing/completed/failed
+	ExtractError   string     `gorm:"type:text" json:"extract_error"`
+	ExtractedAt    *time.Time `json:"extracted_at"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+func (MediaMetadata) TableName() string { return "media_metadata" }
+
+// MetadataSuggestions AI 生成的建议卡片
+type MetadataSuggestions struct {
+	EventTime  string                   `json:"event_time,omitempty"`
+	Location   string                   `json:"location,omitempty"`
+	Tags       []string                 `json:"tags,omitempty"`
+	Category   string                   `json:"category,omitempty"`
+	HintText   string                   `json:"hint_text,omitempty"`
+	DeviceText string                   `json:"device_text,omitempty"`
+	SceneText  string                   `json:"scene_text,omitempty"`
+	Confidence map[string]float64       `json:"confidence,omitempty"`
+}
+
+// ==================== 标签与分类 ====================
 
 // Tag 标签模型
 type Tag struct {
@@ -236,35 +289,35 @@ func (Config) TableName() string { return "configs" }
 
 // DisplayTemplate 展示模板
 type DisplayTemplate struct {
-	ID        string    `gorm:"type:varchar(36);primaryKey" json:"id"`
-	UserID    string    `gorm:"type:varchar(36);not null" json:"user_id"`
-	Name      string    `gorm:"type:varchar(128);not null" json:"name"`
-	Type      string    `gorm:"type:varchar(32);not null" json:"type"` // timeline/calendar/slideshow/grid/map
-	Config    JSONString `gorm:"type:json;not null" json:"config"`
-	IsDefault bool      `gorm:"default:false" json:"is_default"`
-	IsBuiltin bool      `gorm:"default:false" json:"is_builtin"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID        string      `gorm:"type:varchar(36);primaryKey" json:"id"`
+	UserID    string      `gorm:"type:varchar(36);not null" json:"user_id"`
+	Name      string      `gorm:"type:varchar(128);not null" json:"name"`
+	Type      string      `gorm:"type:varchar(32);not null" json:"type"` // timeline/calendar/slideshow/grid/map
+	Config    JSONString  `gorm:"type:json;not null" json:"config"`
+	IsDefault bool        `gorm:"default:false" json:"is_default"`
+	IsBuiltin bool        `gorm:"default:false" json:"is_builtin"`
+	CreatedAt time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (DisplayTemplate) TableName() string { return "display_templates" }
 
 // Slideshow 幻灯片
 type Slideshow struct {
-	ID           string     `gorm:"type:varchar(36);primaryKey" json:"id"`
-	UserID       string     `gorm:"type:varchar(36);not null" json:"user_id"`
-	Title        string     `gorm:"type:varchar(255);not null" json:"title"`
-	Description  string     `gorm:"type:text" json:"description"`
-	TemplateID   *string    `gorm:"type:varchar(36)" json:"template_id"`
+	ID           string      `gorm:"type:varchar(36);primaryKey" json:"id"`
+	UserID       string      `gorm:"type:varchar(36);not null" json:"user_id"`
+	Title        string      `gorm:"type:varchar(255);not null" json:"title"`
+	Description  string      `gorm:"type:text" json:"description"`
+	TemplateID   *string     `gorm:"type:varchar(36)" json:"template_id"`
 	EventIDs     StringArray `gorm:"type:json" json:"event_ids"`
 	MediaIDs     StringArray `gorm:"type:json" json:"media_ids"`
-	BgMusicID    *string    `gorm:"type:varchar(36)" json:"bg_music_id"`
-	Config       JSONString `gorm:"type:json" json:"config"`
-	Duration     int        `gorm:"default:0" json:"duration"`
-	IsPublished  bool       `gorm:"default:false" json:"is_published"`
-	PublishedURL string     `gorm:"type:varchar(255);default:''" json:"published_url"`
-	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	BgMusicID    *string     `gorm:"type:varchar(36)" json:"bg_music_id"`
+	Config       JSONString  `gorm:"type:json" json:"config"`
+	Duration     int         `gorm:"default:0" json:"duration"`
+	IsPublished  bool        `gorm:"default:false" json:"is_published"`
+	PublishedURL string      `gorm:"type:varchar(255);default:''" json:"published_url"`
+	CreatedAt    time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt    time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (Slideshow) TableName() string { return "slideshows" }
@@ -273,36 +326,36 @@ func (Slideshow) TableName() string { return "slideshows" }
 
 // Webhook Webhook 配置
 type Webhook struct {
-	ID         string     `gorm:"type:varchar(36);primaryKey" json:"id"`
-	UserID     string     `gorm:"type:varchar(36);not null" json:"user_id"`
-	Name       string     `gorm:"type:varchar(128);not null" json:"name"`
-	URL        string     `gorm:"type:varchar(512);not null" json:"url"`
-	Secret     string     `gorm:"type:varchar(255);default:''" json:"-"`
+	ID         string      `gorm:"type:varchar(36);primaryKey" json:"id"`
+	UserID     string      `gorm:"type:varchar(36);not null" json:"user_id"`
+	Name       string      `gorm:"type:varchar(128);not null" json:"name"`
+	URL        string      `gorm:"type:varchar(512);not null" json:"url"`
+	Secret     string      `gorm:"type:varchar(255);default:''" json:"-"`
 	Events     StringArray `gorm:"type:json;not null" json:"events"`
-	Headers    JSONString `gorm:"type:json" json:"headers"`
-	IsActive   bool       `gorm:"default:true" json:"is_active"`
-	RetryCount int        `gorm:"type:tinyint;default:3" json:"retry_count"`
-	TimeoutMs  int        `gorm:"default:5000" json:"timeout_ms"`
-	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	Headers    JSONString  `gorm:"type:json" json:"headers"`
+	IsActive   bool        `gorm:"default:true" json:"is_active"`
+	RetryCount int         `gorm:"type:tinyint;default:3" json:"retry_count"`
+	TimeoutMs  int         `gorm:"default:5000" json:"timeout_ms"`
+	CreatedAt  time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (Webhook) TableName() string { return "webhooks" }
 
 // WebhookDelivery Webhook 投递日志
 type WebhookDelivery struct {
-	ID             string     `gorm:"type:varchar(36);primaryKey" json:"id"`
-	WebhookID      string     `gorm:"type:varchar(36);not null;index" json:"webhook_id"`
-	EventType      string     `gorm:"type:varchar(64);not null" json:"event_type"`
-	Payload        JSONString `gorm:"type:json;not null" json:"payload"`
-	RequestHeaders JSONString `gorm:"type:json" json:"request_headers"`
-	ResponseStatus *int       `json:"response_status"`
-	ResponseBody   string     `gorm:"type:text" json:"response_body"`
-	DurationMs     *int       `json:"duration_ms"`
-	Success        bool       `gorm:"default:false" json:"success"`
-	Attempts       int        `gorm:"type:tinyint;default:0" json:"attempts"`
-	NextRetry      *time.Time `gorm:"index" json:"next_retry"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime;index" json:"created_at"`
+	ID             string      `gorm:"type:varchar(36);primaryKey" json:"id"`
+	WebhookID      string      `gorm:"type:varchar(36);not null;index" json:"webhook_id"`
+	EventType      string      `gorm:"type:varchar(64);not null" json:"event_type"`
+	Payload        JSONString  `gorm:"type:json;not null" json:"payload"`
+	RequestHeaders JSONString  `gorm:"type:json" json:"request_headers"`
+	ResponseStatus *int        `json:"response_status"`
+	ResponseBody   string      `gorm:"type:text" json:"response_body"`
+	DurationMs     *int        `json:"duration_ms"`
+	Success        bool        `gorm:"default:false" json:"success"`
+	Attempts       int         `gorm:"type:tinyint;default:0" json:"attempts"`
+	NextRetry      *time.Time  `gorm:"index" json:"next_retry"`
+	CreatedAt      time.Time   `gorm:"autoCreateTime;index" json:"created_at"`
 }
 
 func (WebhookDelivery) TableName() string { return "webhook_deliveries" }
@@ -359,3 +412,16 @@ type AITask struct {
 }
 
 func (AITask) TableName() string { return "ai_tasks" }
+
+// SystemSetting 系统设置
+type SystemSetting struct {
+	ID          string    `gorm:"type:varchar(36);primaryKey" json:"id"`
+	Key         string    `gorm:"type:varchar(128);not null;uniqueIndex" json:"key"`
+	Value       string    `gorm:"type:text;not null" json:"value"`
+	ValueType   string    `gorm:"type:varchar(16);default:'string'" json:"value_type"`
+	Description string    `gorm:"type:varchar(255);default:''" json:"description"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+func (SystemSetting) TableName() string { return "system_settings" }
